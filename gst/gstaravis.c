@@ -514,6 +514,27 @@ gst_aravis_stop( GstBaseSrc * src )
 	return TRUE;
 }
 
+
+
+static gboolean gst_aravis_trigger( GstBaseSrc *src ){
+
+	GError *error = NULL;
+	GstAravis *gst_aravis = GST_ARAVIS(src);
+	
+	GST_OBJECT_LOCK(gst_aravis);
+	arv_camera_software_trigger(gst_aravis->camera, &error);
+	GST_OBJECT_UNLOCK(gst_aravis);
+
+	if(error != NULL){
+		GST_ERROR_OBJECT (src, "Software trigger error: %s", error->message);
+		return FALSE;
+	}
+	g_error_free(error);
+	return TRUE;
+	
+}
+
+
 static void
 gst_aravis_get_times (GstBaseSrc * basesrc, GstBuffer * buffer,
 		      GstClockTime * start, GstClockTime * end)
@@ -536,7 +557,7 @@ gst_aravis_get_times (GstBaseSrc * basesrc, GstBuffer * buffer,
 }
 
 static GstFlowReturn
-gst_aravis_create (GstPushSrc * push_src, GstBuffer ** buffer)
+gst_aravis_create (GstPushSrc * push_src, GstBuffer ** buffer)  
 {
 	GstAravis *gst_aravis;
 	int arv_row_stride;
@@ -546,20 +567,51 @@ gst_aravis_create (GstPushSrc * push_src, GstBuffer ** buffer)
 	guint64 timestamp_ns;
 	gboolean base_src_does_timestamp;
 	ArvBuffer *arv_buffer = NULL;
+	GError *error = NULL;
 
 	gst_aravis = GST_ARAVIS (push_src);
 	base_src_does_timestamp = gst_base_src_get_do_timestamp(GST_BASE_SRC(push_src));
+
+	// get trigger mode  //modification by Luca Capra
+	
+
+	gboolean triggerModeEnabled = FALSE;
+	gboolean triggerModeAvail = arv_device_is_feature_available (arv_camera_get_device (gst_aravis->camera), "TriggerMode", &error);
+
+	if (error != NULL) {
+		GST_ERROR_OBJECT (gst_aravis, "Check TriggerMode avail failed: %d %s", error->code, error->message);
+		return GST_FLOW_ERROR;
+	}
+
+	if (triggerModeAvail) {
+
+		ArvGcNode *feature = arv_device_get_feature (arv_camera_get_device (gst_aravis->camera), "TriggerMode");
+		const char *value = arv_gc_string_get_value (ARV_GC_STRING (feature), &error);
+
+		if (error != NULL) {
+			GST_ERROR_OBJECT (gst_aravis, "Read TriggerMode failed: %d %s", error->code, error->message);
+			return GST_FLOW_ERROR;
+		}
+
+		triggerModeEnabled = strcmp(value, "On") == 0;
+	}
 
 	GST_OBJECT_LOCK (gst_aravis);
 
 	do {
 		if (arv_buffer) arv_stream_push_buffer (gst_aravis->stream, arv_buffer);
 		arv_buffer = arv_stream_timeout_pop_buffer (gst_aravis->stream, gst_aravis->buffer_timeout_us);
-	} while (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS);
+		if (arv_buffer == NULL && triggerModeEnabled) {
+			GST_DEBUG_OBJECT (gst_aravis, "Waiting for buffer");
+		}
 
-	if (arv_buffer == NULL)
+	} while (
+		(arv_buffer == NULL && triggerModeEnabled) || (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS)
+	);
+
+	if (arv_buffer == NULL) {
 		goto error;
-
+	}
 	buffer_data = (char *) arv_buffer_get_data (arv_buffer, &buffer_size);
 	arv_buffer_get_image_region (arv_buffer, NULL, NULL, &width, &height);
 	arv_row_stride = width * ARV_PIXEL_FORMAT_BIT_PER_PIXEL (arv_buffer_get_image_pixel_format (arv_buffer)) / 8;
