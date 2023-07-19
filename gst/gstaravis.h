@@ -79,6 +79,9 @@ struct _GstAravis {
 	guint64 timestamp_offset;
 	guint64 last_timestamp;
 
+	//GClosure *triggerClosure;
+
+
 	char *features;
 };
 

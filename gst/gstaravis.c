@@ -516,21 +516,27 @@ gst_aravis_stop( GstBaseSrc * src )
 
 
 
-static gboolean gst_aravis_trigger( GstBaseSrc *src ){
-
+static void gst_aravis_trigger( gpointer *src ){
+	
 	GError *error = NULL;
 	GstAravis *gst_aravis = GST_ARAVIS(src);
 	
 	GST_OBJECT_LOCK(gst_aravis);
+	//ret = gst_element_set_state(GST_ELEMENT(gst_aravis), GST_STATE_PAUSED);
+	GST_WARNING_OBJECT (gst_aravis, "Trying to trigger camera by software...");
 	arv_camera_software_trigger(gst_aravis->camera, &error);
-	GST_OBJECT_UNLOCK(gst_aravis);
+	//arv_stream_try_pop_buffer(gst_aravis->stream);
+	GST_WARNING_OBJECT (gst_aravis, "In theory, trigger was sent!");
+	GST_WARNING_OBJECT(gst_aravis, "Trying to stop trigger signal...");
+	g_signal_stop_emission_by_name(gst_aravis, "trigger");
+	GST_WARNING_OBJECT(gst_aravis, "In theory, signal emission has been stopped!");
+	//ret = gst_element_set_state(GST_ELEMENT(gst_aravis), GST_STATE_PLAYING);
 
+	GST_OBJECT_UNLOCK(gst_aravis);
 	if(error != NULL){
 		GST_ERROR_OBJECT (src, "Software trigger error: %s", error->message);
-		return FALSE;
 	}
-	g_error_free(error);
-	return TRUE;
+	
 	
 }
 
@@ -572,7 +578,7 @@ gst_aravis_create (GstPushSrc * push_src, GstBuffer ** buffer)
 	gst_aravis = GST_ARAVIS (push_src);
 	base_src_does_timestamp = gst_base_src_get_do_timestamp(GST_BASE_SRC(push_src));
 
-	// get trigger mode  //modification by Luca Capra
+	// get trigger mode  //modification by Luca Capra to use aravissrc for triggered captures
 	
 
 	gboolean triggerModeEnabled = FALSE;
@@ -595,6 +601,10 @@ gst_aravis_create (GstPushSrc * push_src, GstBuffer ** buffer)
 
 		triggerModeEnabled = strcmp(value, "On") == 0;
 	}
+
+	
+
+
 
 	GST_OBJECT_LOCK (gst_aravis);
 
@@ -735,6 +745,10 @@ gst_aravis_init (GstAravis *gst_aravis)
 
 	gst_aravis->all_caps = NULL;
 	gst_aravis->fixed_caps = NULL;
+	
+	//This is where we connect the new signal to the trigger callback
+	g_signal_connect(G_OBJECT(gst_aravis), "trigger", G_CALLBACK(gst_aravis_trigger), gst_aravis);
+	
 }
 
 static void
@@ -1183,12 +1197,15 @@ gst_aravis_class_init (GstAravisClass * klass)
 	gstbasesrc_class->get_times = GST_DEBUG_FUNCPTR (gst_aravis_get_times);
 
 	gstpushsrc_class->create = GST_DEBUG_FUNCPTR (gst_aravis_create);
+
+	
+	g_signal_new("trigger", GST_TYPE_ARAVIS, G_SIGNAL_RUN_FIRST, 0, NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
 static gboolean
 plugin_init (GstPlugin * plugin)
 {
-        return gst_element_register (plugin, "aravissrc", GST_RANK_NONE, GST_TYPE_ARAVIS);
+        return gst_element_register (plugin, "araviscustomsrc", GST_RANK_NONE, GST_TYPE_ARAVIS);
 }
 
 #define PACKAGE "aravis"
