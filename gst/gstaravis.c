@@ -42,10 +42,22 @@
 #define _(x) (x)
 
 #define GST_ARAVIS_DEFAULT_N_BUFFERS		50
-#define GST_ARAVIS_BUFFER_TIMEOUT_DEFAULT	2000000
+#define GST_ARAVIS_BUFFER_TIMEOUT_DEFAULT	2000
 
 GST_DEBUG_CATEGORY_STATIC (aravis_debug);
 #define GST_CAT_DEFAULT aravis_debug
+
+enum
+{
+  /* signals */
+  SIGNAL_EOS,
+  SIGNAL_TRIGGER,
+
+  /* actions */
+  SIGNAL_TRY_TRIGGER,
+
+  LAST_SIGNAL
+};
 
 enum
 {
@@ -115,6 +127,9 @@ static GstStaticPadTemplate aravis_src_template = GST_STATIC_PAD_TEMPLATE ("src"
 									   GST_PAD_SRC,
 									   GST_PAD_ALWAYS,
 									   GST_STATIC_CAPS ("ANY"));
+
+
+static guint gst_aravis_signals[LAST_SIGNAL] = { 0 };
 
 static GstCaps *
 gst_aravis_get_all_camera_caps (GstAravis *gst_aravis, GError **error)
@@ -533,12 +548,14 @@ static void gst_aravis_trigger( gpointer *src ){
 	//ret = gst_element_set_state(GST_ELEMENT(gst_aravis), GST_STATE_PLAYING);
 
 	GST_OBJECT_UNLOCK(gst_aravis);
+
 	if(error != NULL){
 		GST_ERROR_OBJECT (src, "Software trigger error: %s", error->message);
 	}
 	
 	
 }
+
 
 
 static void
@@ -1199,8 +1216,12 @@ gst_aravis_class_init (GstAravisClass * klass)
 	gstpushsrc_class->create = GST_DEBUG_FUNCPTR (gst_aravis_create);
 
 	
-	g_signal_new("trigger", GST_TYPE_ARAVIS, G_SIGNAL_RUN_FIRST, 0, NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_POINTER);
+	gst_aravis_signals[SIGNAL_TRIGGER] = 
+		g_signal_new("trigger", GST_TYPE_ARAVIS, G_SIGNAL_RUN_LAST, 0,
+		NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
+
+
 
 static gboolean
 plugin_init (GstPlugin * plugin)

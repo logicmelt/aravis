@@ -81,8 +81,9 @@ struct _GstAravis {
 
 	//GClosure *triggerClosure;
 
-
 	char *features;
+	
+	
 };
 
 struct _GstAravisClass {
@@ -90,6 +91,8 @@ struct _GstAravisClass {
 };
 
 GType gst_aravis_get_type (void);
+
+
 
 G_END_DECLS
 
