@@ -529,8 +529,7 @@ gst_aravis_stop( GstBaseSrc * src )
 	return TRUE;
 }
 
-
-
+//Custom function to trigger the camera by software using signals
 static void gst_aravis_trigger( gpointer *src ){
 	
 	GError *error = NULL;
@@ -554,6 +553,14 @@ static void gst_aravis_trigger( gpointer *src ){
 	}
 	
 	
+}
+
+//Custom function to set stop flag to true when the signal is emitted;
+static void gst_aravis_eos( gpointer *src ){
+	GstAravis *gst_aravis = GST_ARAVIS(src);
+	GST_WARNING_OBJECT (gst_aravis, "EOS SIGNAL TRIGGERED STOP FLAG TO BE SET!!");
+	gst_aravis->stop = TRUE;
+	g_signal_stop_emission_by_name(gst_aravis, "eos");
 }
 
 
@@ -624,12 +631,15 @@ gst_aravis_create (GstPushSrc * push_src, GstBuffer ** buffer)
 
 
 	GST_OBJECT_LOCK (gst_aravis);
-
 	do {
 		if (arv_buffer) arv_stream_push_buffer (gst_aravis->stream, arv_buffer);
 		arv_buffer = arv_stream_timeout_pop_buffer (gst_aravis->stream, gst_aravis->buffer_timeout_us);
 		if (arv_buffer == NULL && triggerModeEnabled) {
 			GST_DEBUG_OBJECT (gst_aravis, "Waiting for buffer");
+			if(gst_aravis->stop){
+				GST_WARNING_OBJECT(gst_aravis, "Stop flag is true, exiting loop...");
+				goto no_trigger;
+			}
 		}
 
 	} while (
@@ -685,6 +695,9 @@ gst_aravis_create (GstPushSrc * push_src, GstBuffer ** buffer)
 error:
 	GST_OBJECT_UNLOCK (gst_aravis);
 	return GST_FLOW_ERROR;
+no_trigger:
+	GST_OBJECT_UNLOCK(gst_aravis);
+	return GST_FLOW_EOS;
 }
 
 static GstCaps *
@@ -764,6 +777,8 @@ gst_aravis_init (GstAravis *gst_aravis)
 	gst_aravis->fixed_caps = NULL;
 	
 	//This is where we connect the new signal to the trigger callback
+	gst_aravis->stop = FALSE;
+	g_signal_connect(G_OBJECT(gst_aravis), "eos", G_CALLBACK(gst_aravis_eos), gst_aravis);
 	g_signal_connect(G_OBJECT(gst_aravis), "trigger", G_CALLBACK(gst_aravis_trigger), gst_aravis);
 	
 }
@@ -1218,6 +1233,9 @@ gst_aravis_class_init (GstAravisClass * klass)
 	
 	gst_aravis_signals[SIGNAL_TRIGGER] = 
 		g_signal_new("trigger", GST_TYPE_ARAVIS, G_SIGNAL_RUN_LAST, 0,
+		NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_POINTER);
+	gst_aravis_signals[SIGNAL_EOS] = 
+		g_signal_new("eos", GST_TYPE_ARAVIS, G_SIGNAL_RUN_LAST, 0,
 		NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 

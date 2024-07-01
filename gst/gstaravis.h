@@ -80,6 +80,7 @@ struct _GstAravis {
 	guint64 last_timestamp;
 
 	//GClosure *triggerClosure;
+	gboolean stop;
 
 	char *features;
 	
