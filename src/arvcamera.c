@@ -1034,6 +1034,10 @@ arv_camera_set_frame_rate (ArvCamera *camera, double frame_rate, GError **error)
 
 	g_return_if_fail (ARV_IS_CAMERA (camera));
 
+	if(!arv_camera_is_feature_implemented(camera, "AcquisitionFrameRate", &local_error)){
+		return;
+	}
+
 	if (frame_rate <= 0.0) {
 		arv_camera_set_frame_rate_enable(camera, FALSE, &local_error);
 		if (local_error != NULL)
@@ -1302,10 +1306,12 @@ arv_camera_set_frame_rate_enable(ArvCamera *camera, gboolean enable, GError **er
 		case ARV_CAMERA_VENDOR_IMPERX:	
 		case ARV_CAMERA_VENDOR_UNKNOWN:
 			if (local_error == NULL) {
-				if (arv_camera_is_feature_available (camera, "AcquisitionFrameRateEnable", &local_error)) {
-					if (local_error == NULL)
-						arv_camera_set_boolean (camera, "AcquisitionFrameRateEnable", TRUE, &local_error);
+				if (arv_camera_is_feature_implemented(camera, "AcquisitionFrameRateEnable", &local_error)) {
+					if (arv_camera_is_feature_available (camera, "AcquisitionFrameRateEnable", &local_error)) {
+						if (local_error == NULL)
+							arv_camera_set_boolean (camera, "AcquisitionFrameRateEnable", TRUE, &local_error);
 					}
+				}	
 			}
 			break;
 		case ARV_CAMERA_VENDOR_PROSILICA:
