@@ -626,25 +626,31 @@ gst_aravis_create (GstPushSrc * push_src, GstBuffer ** buffer)
 		triggerModeEnabled = strcmp(value, "On") == 0;
 	}
 
-	
-
-
-
-	GST_OBJECT_LOCK (gst_aravis);
 	do {
+		GST_OBJECT_LOCK(gst_aravis);
 		if (arv_buffer) arv_stream_push_buffer (gst_aravis->stream, arv_buffer);
 		arv_buffer = arv_stream_timeout_pop_buffer (gst_aravis->stream, gst_aravis->buffer_timeout_us);
 		if (arv_buffer == NULL && triggerModeEnabled) {
-			GST_DEBUG_OBJECT (gst_aravis, "Waiting for buffer");
 			if(gst_aravis->stop){
 				GST_WARNING_OBJECT(gst_aravis, "Stop flag is true, exiting loop...");
 				goto no_trigger;
 			}
 		}
+		// We need to keep looping while:
+		// 1. arv_buffer is NULL and triggerModeEnabled is true (waiting for a trigger)
+		// 2. arv_buffer is not NULL but its status is not success (waiting for a valid buffer)
+		bool loop_condition = ((arv_buffer == NULL && triggerModeEnabled) || (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS));
+		// If loop condition is false, we unlock the object and break the loop
+		if (!loop_condition) {
+			GST_OBJECT_UNLOCK(gst_aravis);
+			break;
+		}
+		// Otherwise, we unlock the object before the next iteration in order to allow other threads to access it,
+		// such as signal handlers or property setters/getters.
+		GST_OBJECT_UNLOCK(gst_aravis);
+	} while (true);
 
-	} while (
-		(arv_buffer == NULL && triggerModeEnabled) || (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS)
-	);
+	GST_OBJECT_LOCK (gst_aravis);
 
 	if (arv_buffer == NULL) {
 		goto error;
