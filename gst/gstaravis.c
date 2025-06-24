@@ -886,19 +886,33 @@ gst_aravis_set_property (GObject * object, guint prop_id,
 			gst_aravis->packet_delay = g_value_get_int64 (value);
 			GST_OBJECT_UNLOCK (gst_aravis);
 			break;
-                case PROP_PACKET_SIZE:
-                        gst_aravis->packet_size = g_value_get_int (value);
-                        break;
-                case PROP_AUTO_PACKET_SIZE:
-                        gst_aravis->auto_packet_size = g_value_get_boolean (value);
-                        break;
-                case PROP_PACKET_RESEND:
-                        gst_aravis->packet_resend = g_value_get_boolean (value);
-                        break;
-                case PROP_FEATURES:
+		case PROP_PACKET_SIZE:
+				gst_aravis->packet_size = g_value_get_int (value);
+				break;
+		case PROP_AUTO_PACKET_SIZE:
+				gst_aravis->auto_packet_size = g_value_get_boolean (value);
+				break;
+		case PROP_PACKET_RESEND:
+				gst_aravis->packet_resend = g_value_get_boolean (value);
+				break;
+		case PROP_FEATURES:
 			GST_OBJECT_LOCK (gst_aravis);
 			g_free (gst_aravis->features);
-                        gst_aravis->features = g_value_dup_string (value);
+			gst_aravis->features = g_value_dup_string (value);
+			//Check if camera exists before setting features
+			if (gst_aravis->camera == NULL) {
+				GST_ERROR_OBJECT (gst_aravis, "Camera not initialized, cannot set features at this moment");
+				GST_OBJECT_UNLOCK (gst_aravis);
+            	break;
+			}
+			GError *error;
+			arv_device_set_features_from_string (arv_camera_get_device (gst_aravis->camera), gst_aravis->features, &error);
+			if(error){
+				GST_ERROR_OBJECT (gst_aravis, "Error setting features: %s", error->message);
+			} else {
+				GST_DEBUG_OBJECT (gst_aravis, "Features in camera set to %s", gst_aravis->features);
+			}
+			g_error_free (error);
 			GST_OBJECT_UNLOCK (gst_aravis);
                         break;
 		case PROP_NUM_ARV_BUFFERS:
