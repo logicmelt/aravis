@@ -1009,7 +1009,9 @@ gst_aravis_get_property (GObject * object, guint prop_id, GValue * value,
                         g_value_set_boolean (value, gst_aravis->packet_resend);
                         break;
 		case PROP_FEATURES:
+			GST_OBJECT_LOCK(gst_aravis);
 			g_value_set_string (value, gst_aravis->features);
+			GST_OBJECT_UNLOCK(gst_aravis);
 			break;
 		case PROP_NUM_ARV_BUFFERS:
 			g_value_set_int (value, gst_aravis->num_arv_buffers);
