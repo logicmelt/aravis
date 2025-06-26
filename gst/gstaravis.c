@@ -639,7 +639,7 @@ gst_aravis_create (GstPushSrc * push_src, GstBuffer ** buffer)
 		// We need to keep looping while:
 		// 1. arv_buffer is NULL and triggerModeEnabled is true (waiting for a trigger)
 		// 2. arv_buffer is not NULL but its status is not success (waiting for a valid buffer)
-		bool loop_condition = ((arv_buffer == NULL && triggerModeEnabled) || (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS));
+		gboolean loop_condition = ((arv_buffer == NULL && triggerModeEnabled) || (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS));
 		// If loop condition is false, we unlock the object and break the loop
 		if (!loop_condition) {
 			GST_OBJECT_UNLOCK(gst_aravis);
@@ -648,7 +648,7 @@ gst_aravis_create (GstPushSrc * push_src, GstBuffer ** buffer)
 		// Otherwise, we unlock the object before the next iteration in order to allow other threads to access it,
 		// such as signal handlers or property setters/getters.
 		GST_OBJECT_UNLOCK(gst_aravis);
-	} while (true);
+	} while (TRUE);
 
 	GST_OBJECT_LOCK (gst_aravis);
 
