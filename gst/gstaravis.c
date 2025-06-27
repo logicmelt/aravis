@@ -918,10 +918,10 @@ gst_aravis_set_property (GObject * object, guint prop_id,
 				arv_device_set_features_from_string (arv_camera_get_device (gst_aravis->camera), gst_aravis->features, &error);
 				if(error){
 					GST_ERROR_OBJECT (gst_aravis, "Error setting features: %s", error->message);
+					g_error_free (error);
 				} else {
 					GST_DEBUG_OBJECT (gst_aravis, "Features in camera set to %s", gst_aravis->features);
 				}
-				g_error_free (error);
 			}
 			GST_OBJECT_UNLOCK (gst_aravis);
             break;
