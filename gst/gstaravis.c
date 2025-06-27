@@ -406,7 +406,7 @@ gst_aravis_set_caps (GstBaseSrc *src, GstCaps *caps)
 
 	if (error)
 		goto errored;
-
+	gst_aravis->started = TRUE;
 	GST_OBJECT_UNLOCK (gst_aravis);
 
 	result = TRUE;
@@ -768,7 +768,7 @@ gst_aravis_init (GstAravis *gst_aravis)
 	gst_aravis->packet_delay = -1;
 	gst_aravis->packet_size = -1;
 	gst_aravis->auto_packet_size = FALSE;
-        gst_aravis->packet_resend = TRUE;
+    gst_aravis->packet_resend = TRUE;
 	gst_aravis->num_arv_buffers = GST_ARAVIS_DEFAULT_N_BUFFERS;
 	gst_aravis->payload = 0;
 	gst_aravis->usb_mode = ARV_UV_USB_MODE_DEFAULT;
@@ -782,6 +782,7 @@ gst_aravis_init (GstAravis *gst_aravis)
 	gst_aravis->all_caps = NULL;
 	gst_aravis->fixed_caps = NULL;
 	
+	gst_aravis->started = FALSE;
 	//This is where we connect the new signal to the trigger callback
 	gst_aravis->stop = FALSE;
 	g_signal_connect(G_OBJECT(gst_aravis), "eos", G_CALLBACK(gst_aravis_eos), gst_aravis);
@@ -911,16 +912,19 @@ gst_aravis_set_property (GObject * object, guint prop_id,
 				GST_OBJECT_UNLOCK (gst_aravis);
             	break;
 			}
-			GError *error;
-			arv_device_set_features_from_string (arv_camera_get_device (gst_aravis->camera), gst_aravis->features, &error);
-			if(error){
-				GST_ERROR_OBJECT (gst_aravis, "Error setting features: %s", error->message);
-			} else {
-				GST_DEBUG_OBJECT (gst_aravis, "Features in camera set to %s", gst_aravis->features);
+			if(gst_aravis->started)
+			{
+				GError *error = NULL;
+				arv_device_set_features_from_string (arv_camera_get_device (gst_aravis->camera), gst_aravis->features, &error);
+				if(error){
+					GST_ERROR_OBJECT (gst_aravis, "Error setting features: %s", error->message);
+				} else {
+					GST_DEBUG_OBJECT (gst_aravis, "Features in camera set to %s", gst_aravis->features);
+				}
+				g_error_free (error);
 			}
-			g_error_free (error);
 			GST_OBJECT_UNLOCK (gst_aravis);
-                        break;
+            break;
 		case PROP_NUM_ARV_BUFFERS:
 			gst_aravis->num_arv_buffers = g_value_get_int (value);
 			break;

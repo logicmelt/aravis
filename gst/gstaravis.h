@@ -61,7 +61,7 @@ struct _GstAravis {
 	int packet_size;
 	gboolean auto_packet_size;
 	gint64 packet_delay;
-        gboolean packet_resend;
+    gboolean packet_resend;
 
 	ArvUvUsbMode usb_mode;
 
@@ -79,6 +79,7 @@ struct _GstAravis {
 	guint64 timestamp_offset;
 	guint64 last_timestamp;
 
+	gboolean started;
 	//GClosure *triggerClosure;
 	gboolean stop;
 
