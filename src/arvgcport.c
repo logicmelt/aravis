@@ -67,6 +67,7 @@ static ArvGvLegacyInfos arv_gc_port_legacy_infos[] = {
    { .vendor_selection = "PleoraTechnologiesInc",       .model_selection = "NTxGigE"},
    { .vendor_selection = "TeledyneDALSA",               .model_selection = "ICE"},
    { .vendor_selection = "Sony",                        .model_selection = "XCG_CGSeries"},
+   { .vendor_selection = "HIKROBOT",                    .model_selection = "HIKCamera"},
 };
 
 typedef struct {
@@ -153,7 +154,6 @@ _use_legacy_endianness_mechanism (ArvGcPort *port, guint64 length)
 				}
 			}
 		}
-
 		port->priv->has_done_legacy_check = TRUE;
 	}
 
